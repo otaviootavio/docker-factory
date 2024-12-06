@@ -147,6 +147,16 @@ Output format:
 }
 ```
 
+### Deploy
+
+# Create a properly escaped JSON string:
+
+The JSON in your environment variable needs to be properly escaped. Here's how to set it up:
+
+```sh
+python -c "import json; print(json.dumps(json.load(open('your-service-account.json'))))" > escaped.txt
+```
+
 ## Troubleshooting
 
 ### Common gcloud Installation Issues:

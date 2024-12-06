@@ -3,22 +3,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class DockerClient:
     def __init__(self):
         self.client = docker.from_env()
 
-    def build_image(self, path, tag, **kwargs):
+    def build_image(self, path, tag):
         try:
             logger.info(f"Building Docker image: {tag}")
             self.client.images.build(
                 path=str(path),
                 tag=tag,
-                rm=True,
-                buildargs={'DOCKER_BUILDKIT': '1'},
-                **kwargs
+                rm=True
             )
             logger.info("Docker image build completed")
-        except docker.errors.BuildError as e:
+        except Exception as e:
             logger.error(f"Failed to build Docker image: {e}")
             raise
 

@@ -8,9 +8,6 @@ import os
 
 logger = setup_logging(__name__)
 
-# Load environment variables from .env file
-load_dotenv()
-
 # Retrieve the database URL from environment variables
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
