@@ -4,6 +4,7 @@ from ..templates import TemplateManager
 
 logger = logging.getLogger(__name__)
 
+
 class ContainerService:
     def __init__(self, docker_client):
         self.docker_client = docker_client
@@ -13,23 +14,23 @@ class ContainerService:
         """Create necessary application files with security middleware"""
         app_dir = Path(f'secure-app-{unique_id}')
         app_dir.mkdir(exist_ok=True)
-        
+
         # Create files from templates
         self.template_manager.write_template(
             'app.py.template',
             app_dir / 'app.py'
         )
-        
+
         self.template_manager.write_template(
             'requirements.template',
             app_dir / 'requirements.txt'
         )
-        
+
         self.template_manager.write_template(
             'dockerfile.template',
             app_dir / 'Dockerfile'
         )
-        
+
         return app_dir
 
     def build_container(self, app_dir, image_tag):
@@ -42,4 +43,22 @@ class ContainerService:
             )
         except Exception as e:
             logger.error(f"Failed to build container: {e}")
+            raise
+
+    def remove_app_files(self, unique_id):
+        """Remove application files and clean up the directory"""
+        app_dir = Path(f'secure-app-{unique_id}')
+        try:
+            if app_dir.exists() and app_dir.is_dir():
+                for file in app_dir.iterdir():
+                    file.unlink()  # Remove each file
+                app_dir.rmdir()  # Remove the directory itself
+                logger.info(f"Application files for {
+                            unique_id} removed successfully.")
+            else:
+                logger.warning(f"Application directory {
+                               app_dir} does not exist or is not a directory.")
+        except Exception as e:
+            logger.error(f"Failed to remove application files for {
+                         unique_id}: {e}")
             raise
