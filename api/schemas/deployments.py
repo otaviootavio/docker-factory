@@ -6,10 +6,7 @@ from datetime import datetime
 class DeploymentRequest(BaseModel):
     client_id: str = Field(..., description="Client identifier")
     region: str = Field(default="us-central1", description="Deployment region")
-    environment_vars: Optional[Dict[str, str]] = Field(
-        default={},
-        description="Additional environment variables"
-    )
+    environment_vars: Optional[Dict[str, str]] = Field(default={}, description="Additional environment variables")
 
 
 class DeploymentResponse(BaseModel):

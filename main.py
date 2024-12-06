@@ -17,11 +17,11 @@ def main():
         deployment_info = manager.deploy()
 
         # Generate timestamp for filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'deployment_config_{timestamp}.json'
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"deployment_config_{timestamp}.json"
 
         # Write deployment info to file
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             json.dump(deployment_info, f, indent=4)
 
         print(f"Deployment successful! Configuration saved to: {filename}")

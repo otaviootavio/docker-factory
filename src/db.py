@@ -19,7 +19,7 @@ Base = declarative_base()
 
 
 class Deployment(Base):
-    __tablename__ = 'deployments'
+    __tablename__ = "deployments"
 
     id = Column(Integer, primary_key=True)
     service_name = Column(String, unique=True)
@@ -40,13 +40,13 @@ def save_deployment(deployment_info, client_id):
     db = SessionLocal()
     try:
         deployment = Deployment(
-            service_name=deployment_info['service_name'],
+            service_name=deployment_info["service_name"],
             client_id=client_id,
-            image_tag=deployment_info.get('image_tag', ''),
-            status='RUNNING',
-            rpc_endpoint=deployment_info.get('rpc_endpoint', ''),
-            ws_endpoint=deployment_info.get('ws_endpoint', ''),
-            access_token=deployment_info.get('access_token', '')
+            image_tag=deployment_info.get("image_tag", ""),
+            status="RUNNING",
+            rpc_endpoint=deployment_info.get("rpc_endpoint", ""),
+            ws_endpoint=deployment_info.get("ws_endpoint", ""),
+            access_token=deployment_info.get("access_token", ""),
         )
         db.add(deployment)
         db.commit()

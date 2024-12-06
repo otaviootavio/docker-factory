@@ -14,10 +14,9 @@ class DeploymentRequest(BaseModel):
     @field_validator("client_id")
     def validate_client_id(cls, value: str) -> str:
         import re
+
         if not re.match(r"^[a-z0-9][a-z0-9_-]*$", value.lower()):
-            raise ValueError(
-                "client_id must contain only lowercase letters, numbers, hyphens, and underscores"
-            )
+            raise ValueError("client_id must contain only lowercase letters, numbers, hyphens, and underscores")
         return value.lower()
 
 
@@ -35,10 +34,7 @@ async def create_deployment(request: DeploymentRequest):
 async def get_deployment(service_name: str):
     try:
         manager = SecureGCPContainerManager("system")
-        service_info = manager.cloud_run_service.get_service_info(
-            service_name=service_name,
-            region="us-central1"
-        )
+        service_info = manager.cloud_run_service.get_service_info(service_name=service_name, region="us-central1")
         return service_info
     except Exception as e:
         logger.error(f"Failed to get deployment: {str(e)}")

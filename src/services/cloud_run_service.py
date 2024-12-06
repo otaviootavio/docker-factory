@@ -12,8 +12,7 @@ class CloudRunService:
     def deploy(self, service_name, image_tag, region, env_vars):
         try:
             """Deploy container to Cloud Run with security configurations"""
-            logger.info(f"Deploying secure service to Cloud Run: {
-                        service_name}")
+            logger.info(f"Deploying secure service to Cloud Run: {service_name}")
 
             service = run_v2.Service()
             service.template = run_v2.RevisionTemplate()
@@ -30,25 +29,19 @@ class CloudRunService:
                 container.env.append(run_v2.EnvVar(name=key, value=value))
 
             # Verify environment variables
-            if not any(env.name == 'JWT_SECRET' for env in container.env):
+            if not any(env.name == "JWT_SECRET" for env in container.env):
                 raise ValueError("JWT_SECRET environment variable not set")
-            if not any(env.name == 'CLIENT_ID' for env in container.env):
+            if not any(env.name == "CLIENT_ID" for env in container.env):
                 raise ValueError("CLIENT_ID environment variable not set")
 
             # Set resource limits
-            container.resources = run_v2.ResourceRequirements(
-                limits={
-                    "cpu": "1",
-                    "memory": "512Mi"
-                }
-            )
+            container.resources = run_v2.ResourceRequirements(limits={"cpu": "1", "memory": "512Mi"})
 
             service.template.containers = [container]
 
             # Set VPC configuration
             vpc_access = run_v2.VpcAccess()
-            vpc_access.connector = f"projects/{self.gcp_client.project_id}/locations/{
-                region}/connectors/default-connector"
+            vpc_access.connector = f"projects/{self.gcp_client.project_id}/locations/{region}/connectors/default-connector"
             vpc_access.egress = run_v2.VpcAccess.VpcEgress.PRIVATE_RANGES_ONLY
             service.template.vpc_access = vpc_access
 
@@ -59,8 +52,7 @@ class CloudRunService:
                 service=service,
             )
 
-            operation = self.gcp_client.cloud_run_client.create_service(
-                request=request)
+            operation = self.gcp_client.cloud_run_client.create_service(request=request)
             result = operation.result()
 
             # Set IAM policy
@@ -75,20 +67,16 @@ class CloudRunService:
 
     def get_service_info(self, service_name, region):
         try:
-            request = run_v2.GetServiceRequest(
-                name=f"projects/{self.gcp_client.project_id}/locations/{
-                    region}/services/{service_name}"
-            )
+            request = run_v2.GetServiceRequest(name=f"projects/{self.gcp_client.project_id}/locations/{region}/services/{service_name}")
 
-            service = self.gcp_client.cloud_run_client.get_service(
-                request=request)
+            service = self.gcp_client.cloud_run_client.get_service(request=request)
 
             return {
-                'service_name': service_name,
-                'rpc_endpoint': f"{service.uri}/",
-                'ws_endpoint': f"wss://{service.uri.split('https://')[1]}/ws",
-                'status': service.latest_ready_revision,
-                'connection_examples': self._generate_connection_examples(service.uri)
+                "service_name": service_name,
+                "rpc_endpoint": f"{service.uri}/",
+                "ws_endpoint": f"wss://{service.uri.split('https://')[1]}/ws",
+                "status": service.latest_ready_revision,
+                "connection_examples": self._generate_connection_examples(service.uri),
             }
 
         except Exception as e:
@@ -97,19 +85,12 @@ class CloudRunService:
 
     def _set_service_iam_policy(self, service_name, region):
         try:
-            service_path = f"projects/{self.gcp_client.project_id}/locations/{
-                region}/services/{service_name}"
+            service_path = f"projects/{self.gcp_client.project_id}/locations/{region}/services/{service_name}"
 
-            binding = policy_pb2.Binding(
-                role="roles/run.invoker",
-                members=["allUsers"]
-            )
+            binding = policy_pb2.Binding(role="roles/run.invoker", members=["allUsers"])
 
             policy = policy_pb2.Policy(bindings=[binding])
-            request = iam_policy_pb2.SetIamPolicyRequest(
-                resource=service_path,
-                policy=policy
-            )
+            request = iam_policy_pb2.SetIamPolicyRequest(resource=service_path, policy=policy)
 
             self.gcp_client.cloud_run_client.set_iam_policy(request)
             logger.info(f"IAM policy set successfully for {service_name}")
@@ -120,16 +101,16 @@ class CloudRunService:
 
     def _generate_connection_examples(self, uri):
         return {
-            'curl': f'curl -X POST {uri}/ -H "Content-Type: application/json" -d \'{{"method": "server_info"}}\'',
-            'python': f'''
+            "curl": f'curl -X POST {uri}/ -H "Content-Type: application/json" -d \'{{"method": "server_info"}}\'',
+            "python": f"""
 import requests
 response = requests.post("{uri}/",
     json={{"method": "server_info"}})
 print(response.json())
-''',
-            'websocket': f'''
+""",
+            "websocket": f"""
 import websockets
 async with websockets.connect("{uri}/ws") as ws:
     await ws.send({{"command": "subscribe", "streams": ["ledger"]}})
-'''
+""",
         }

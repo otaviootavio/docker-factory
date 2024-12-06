@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from string import Template
 
+
 class TemplateManager:
     def __init__(self):
         self.template_dir = Path(__file__).parent
@@ -11,8 +12,8 @@ class TemplateManager:
         template_path = self.template_dir / template_name
         if not template_path.exists():
             raise FileNotFoundError(f"Template {template_name} not found")
-        
-        with open(template_path, 'r') as f:
+
+        with open(template_path, "r") as f:
             return Template(f.read())
 
     def render_template(self, template_name: str, **kwargs) -> str:

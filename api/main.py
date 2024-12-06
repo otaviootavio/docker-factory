@@ -14,5 +14,5 @@ load_dotenv()
 async def health():
     return {"status": "healthy", "timestamp": str(datetime.now())}
 
-app.include_router(deployment_router, prefix="/deployments",
-                   tags=["deployments"])
+
+app.include_router(deployment_router, prefix="/deployments", tags=["deployments"])

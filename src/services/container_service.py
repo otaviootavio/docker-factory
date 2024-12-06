@@ -12,24 +12,15 @@ class ContainerService:
 
     def create_app_files(self, unique_id):
         """Create necessary application files with security middleware"""
-        app_dir = Path(f'secure-app-{unique_id}')
+        app_dir = Path(f"secure-app-{unique_id}")
         app_dir.mkdir(exist_ok=True)
 
         # Create files from templates
-        self.template_manager.write_template(
-            'app.py.template',
-            app_dir / 'app.py'
-        )
+        self.template_manager.write_template("app.py.template", app_dir / "app.py")
 
-        self.template_manager.write_template(
-            'requirements.template',
-            app_dir / 'requirements.txt'
-        )
+        self.template_manager.write_template("requirements.template", app_dir / "requirements.txt")
 
-        self.template_manager.write_template(
-            'dockerfile.template',
-            app_dir / 'Dockerfile'
-        )
+        self.template_manager.write_template("dockerfile.template", app_dir / "Dockerfile")
 
         return app_dir
 
@@ -37,28 +28,22 @@ class ContainerService:
         """Build container using Docker SDK with security best practices"""
         try:
             logger.info("Building secure container image...")
-            self.docker_client.build_image(
-                path=str(app_dir),
-                tag=image_tag
-            )
+            self.docker_client.build_image(path=str(app_dir), tag=image_tag)
         except Exception as e:
             logger.error(f"Failed to build container: {e}")
             raise
 
     def remove_app_files(self, unique_id):
         """Remove application files and clean up the directory"""
-        app_dir = Path(f'secure-app-{unique_id}')
+        app_dir = Path(f"secure-app-{unique_id}")
         try:
             if app_dir.exists() and app_dir.is_dir():
                 for file in app_dir.iterdir():
                     file.unlink()  # Remove each file
                 app_dir.rmdir()  # Remove the directory itself
-                logger.info(f"Application files for {
-                            unique_id} removed successfully.")
+                logger.info(f"Application files for {unique_id} removed successfully.")
             else:
-                logger.warning(f"Application directory {
-                               app_dir} does not exist or is not a directory.")
+                logger.warning(f"Application directory {app_dir} does not exist or is not a directory.")
         except Exception as e:
-            logger.error(f"Failed to remove application files for {
-                         unique_id}: {e}")
+            logger.error(f"Failed to remove application files for {unique_id}: {e}")
             raise

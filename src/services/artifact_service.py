@@ -18,16 +18,14 @@ class ArtifactService:
     def create_repository(self, repository_name, region):
         """Create Artifact Registry repository"""
         try:
-            logger.info(
-                f"Creating/checking Artifact Registry repository: {repository_name}")
+            logger.info(f"Creating/checking Artifact Registry repository: {repository_name}")
 
             parent = f"projects/{self.gcp_client.project_id}/locations/{region}"
             repository_path = f"{parent}/repositories/{repository_name}"
 
             try:
                 # Try to get existing repository
-                request = artifactregistry_v1.GetRepositoryRequest(
-                    name=repository_path)
+                request = artifactregistry_v1.GetRepositoryRequest(name=repository_path)
                 return self.artifact_client.get_repository(request=request)
             except Exception:
                 # Create new repository if it doesn't exist
@@ -36,12 +34,9 @@ class ArtifactService:
                 repository.format_ = artifactregistry_v1.Repository.Format.DOCKER
 
                 request = artifactregistry_v1.CreateRepositoryRequest(
-                    parent=parent,
-                    repository_id=repository_name,
-                    repository=repository
+                    parent=parent, repository_id=repository_name, repository=repository
                 )
-                operation = self.artifact_client.create_repository(
-                    request=request)
+                operation = self.artifact_client.create_repository(request=request)
                 return operation.result()
 
         except Exception as e:
@@ -52,27 +47,27 @@ class ArtifactService:
         # Generate short-lived token for Docker authentication
         token = jwt.encode(
             {
-                'iat': time.time(),
-                'exp': time.time() + 3600,
-                'aud': 'https://oauth2.googleapis.com/token',
-                'iss': self.gcp_client.credentials.service_account_email,
-                'target_audience': registry
+                "iat": time.time(),
+                "exp": time.time() + 3600,
+                "aud": "https://oauth2.googleapis.com/token",
+                "iss": self.gcp_client.credentials.service_account_email,
+                "target_audience": registry,
             },
             self.gcp_client.credentials.private_key,
-            algorithm='RS256'
+            algorithm="RS256",
         )
 
         # Exchange JWT for OAuth2 token
         auth_req = requests.Request()
         token_response = auth_req.post(
-            'https://oauth2.googleapis.com/token',
+            "https://oauth2.googleapis.com/token",
             data={
-                'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                'assertion': token
-            }
+                "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "assertion": token,
+            },
         )
 
-        return token_response.json()['access_token']
+        return token_response.json()["access_token"]
 
     def push_to_registry(self, image_tag, registry_location):
         """Push container to Artifact Registry"""
@@ -86,11 +81,7 @@ class ArtifactService:
 
             # Configure Docker with correct registry URL
             registry_url = f"https://{registry_location}"
-            self.docker_client.client.login(
-                username='oauth2accesstoken',
-                password=token,
-                registry=registry_url
-            )
+            self.docker_client.client.login(username="oauth2accesstoken", password=token, registry=registry_url)
 
             # Push image
             result = self.docker_client.push_image(image_tag)
@@ -114,14 +105,10 @@ class ArtifactService:
             token = self.gcp_client.credentials.token
 
             # Configure Docker client with token
-            self.docker_client.client.login(
-                username='oauth2accesstoken',
-                password=token,
-                registry=registry_location
-            )
+            self.docker_client.client.login(username="oauth2accesstoken", password=token, registry=registry_location)
 
-            logger.info(f"Successfully configured Docker authentication for {
-                        registry_location}")
+            logger.info(
+                f"Successfully configured Docker authentication for {registry_location}")
 
         except Exception as e:
             logger.error(f"Failed to configure Docker authentication: {e}")
@@ -131,18 +118,15 @@ class ArtifactService:
         try:
             # Parse repository and image details from tag
             project = self.gcp_client.project_id
-            repository = image_tag.split('/')[-2]
-            image = image_tag.split('/')[-1]
+            repository = image_tag.split("/")[-2]
+            image = image_tag.split("/")[-1]
 
             # Get the parent path for the repository
-            location = image_tag.split('-docker.pkg.dev')[0].split('/')[-1]
-            parent = f"projects/{project}/locations/{
-                location}/repositories/{repository}"
+            location = image_tag.split("-docker.pkg.dev")[0].split("/")[-1]
+            parent = f"projects/{project}/locations/{location}/repositories/{repository}"
 
             # List images in repository
-            request = self.gcp_client.artifact_client.list_docker_images(
-                parent=parent
-            )
+            request = self.gcp_client.artifact_client.list_docker_images(parent=parent)
 
             # Check if our image exists
             try:

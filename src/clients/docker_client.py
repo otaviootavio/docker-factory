@@ -11,11 +11,7 @@ class DockerClient:
     def build_image(self, path, tag):
         try:
             logger.info(f"Building Docker image: {tag}")
-            self.client.images.build(
-                path=str(path),
-                tag=tag,
-                rm=True
-            )
+            self.client.images.build(path=str(path), tag=tag, rm=True)
             logger.info("Docker image build completed")
         except Exception as e:
             logger.error(f"Failed to build Docker image: {e}")
