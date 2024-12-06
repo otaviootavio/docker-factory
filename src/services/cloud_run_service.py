@@ -35,7 +35,7 @@ class CloudRunService:
                 raise ValueError("CLIENT_ID environment variable not set")
 
             # Set resource limits
-            container.resources = run_v2.ResourceRequirements(limits={"cpu": "1", "memory": "512Mi"})
+            container.resources = run_v2.ResourceRequirements(limits={"cpu": "8", "memory": "4Gi"})
 
             service.template.containers = [container]
 

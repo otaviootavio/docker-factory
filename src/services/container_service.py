@@ -21,6 +21,10 @@ class ContainerService:
         self.template_manager.write_template("requirements.template", app_dir / "requirements.txt")
 
         self.template_manager.write_template("dockerfile.template", app_dir / "Dockerfile")
+        
+        self.template_manager.write_template("rippled.cfg", app_dir / "rippled.cfg")
+        self.template_manager.write_template("validators.txt", app_dir / "validators.txt")
+        self.template_manager.write_template("supervisord.conf", app_dir / "supervisord.conf")
 
         return app_dir
 

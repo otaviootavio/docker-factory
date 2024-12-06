@@ -1,36 +1,60 @@
-FROM python:3.9-slim
+FROM ubuntu:22.04
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Configure environment variables
+ENV LANGUAGE=C.UTF-8 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
 
-# Set working directory
-WORKDIR /app
-
-# Install security updates and curl for healthchecks
+# Install system dependencies including Python and build tools
 RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y curl && \
+    apt-get install -y \
+    python3 \
+    python3-pip \
+    build-essential \
+    supervisor \
+    curl \
+    wget \
+    gnupg \
+    socat \
+    libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Install rippled
+RUN mkdir -p /usr/local/share/keyrings/ && \
+    wget -q -O - "https://repos.ripple.com/repos/api/gpg/key/public" | gpg --dearmor > /usr/local/share/keyrings/ripple-key.gpg && \
+    echo "deb [signed-by=/usr/local/share/keyrings/ripple-key.gpg] https://repos.ripple.com/repos/rippled-deb jammy stable" | tee -a /etc/apt/sources.list.d/ripple.list && \
+    apt-get update && \
+    apt-get install rippled -y && \
+    ln -s /opt/ripple/bin/rippled /usr/bin/rippled && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set up Python environment
+WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy configs and setup directories
+RUN mkdir -p /etc/opt/ripple /etc/rippled /var/log/rippled /var/lib/rippled/db /var/log/supervisor
+COPY rippled.cfg /etc/opt/ripple/
+COPY validators.txt /etc/rippled/
 COPY app.py .
+COPY supervisord.conf /etc/supervisor/conf.d/
 
-# Set ownership to non-root user
-RUN chown -R appuser:appuser /app
+# Create startup script
+# Create startup script
+RUN echo '#!/bin/bash\n\
+exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf' > /app/startup.sh && \
+    chmod +x /app/startup.sh
+    
+# Expose ports
+EXPOSE 8080 5005 51235
 
-# Switch to non-root user
-USER appuser
+# Health check focusing on API availability
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:8080/health || exit 1
-
-# Expose port
-EXPOSE 8080
-
-# Use gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "--access-logfile", "-", "app:app"]
+# Start services with the startup script
+CMD ["/app/startup.sh"]

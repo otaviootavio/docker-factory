@@ -13,7 +13,7 @@ class GCPClient:
             raise ValueError("GCP_SERVICE_ACCOUNT_KEY environment variable not set")
 
         try:
-            credentials_json = json.loads(credentials_str)
+            credentials_json = json.loads(credentials_str, strict=False)
 
             # Validate required fields
             required_fields = [

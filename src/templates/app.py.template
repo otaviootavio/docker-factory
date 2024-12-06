@@ -5,6 +5,7 @@ import os
 import logging
 import sys
 from datetime import datetime
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -15,6 +16,33 @@ logging.basicConfig(
 logger = logging.getLogger('secure-app')
 
 app = Flask(__name__)
+
+# Configure rippled node connection
+RIPPLED_URL = "http://localhost:5005"  # Ensure http:// prefix
+
+def query_rippled(method, params=None):
+    """Helper function to query the rippled node"""
+    try:
+        payload = {
+            "method": method,
+            "params": [params] if params else []
+        }
+        response = requests.post(
+            RIPPLED_URL, 
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+        if response.status_code != 200:
+            logger.error(f"Rippled returned status {response.status_code}")
+            return {"error": f"Rippled error: {response.status_code}"}
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        logger.error("Failed to connect to rippled")
+        return {"error": "Rippled connection failed"}
+    except Exception as e:
+        logger.error(f"Error querying rippled: {str(e)}")
+        return {"error": str(e)}
 
 def require_auth(f):
     @wraps(f)
@@ -72,11 +100,24 @@ def require_auth(f):
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat()
-    })
+    """Health check endpoint that also checks rippled status"""
+    try:
+        # Check rippled server info
+        rippled_status = query_rippled("server_info")
+        node_status = "healthy" if "result" in rippled_status else "rippled not responding"
+        
+        return jsonify({
+            'status': 'healthy',
+            'rippled_status': node_status,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Health check error: {str(e)}")
+        return jsonify({
+            'status': 'healthy',  # API is still healthy even if rippled isn't
+            'rippled_status': 'error',
+            'timestamp': datetime.utcnow().isoformat()
+        })
 
 @app.route('/')
 @require_auth
@@ -84,11 +125,35 @@ def hello():
     """Main endpoint requiring authentication"""
     client_id = os.environ.get('CLIENT_ID', 'unknown')
     logger.info(f"Successful request for client: {client_id}")
+    
+    # Get basic node info
+    server_info = query_rippled("server_info")
+    
     return jsonify({
-        'message': 'Hello, World!',
         'client_id': client_id,
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.utcnow().isoformat(),
+        'node_info': server_info.get('result', {}).get('info', {})
     })
+
+@app.route('/node/info')
+@require_auth
+def node_info():
+    """Get detailed node information"""
+    return jsonify(query_rippled("server_info"))
+
+@app.route('/node/state')
+@require_auth
+def node_state():
+    """Get node state information including sync status"""
+    server_state = query_rippled("server_state")
+    return jsonify(server_state)
+
+@app.route('/validators')
+@require_auth
+def validators():
+    """Get information about validators"""
+    validators_info = query_rippled("validators")
+    return jsonify(validators_info)
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
