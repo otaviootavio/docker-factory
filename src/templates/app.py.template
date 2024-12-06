@@ -1,0 +1,95 @@
+from flask import Flask, request, jsonify
+import jwt
+from functools import wraps
+import os
+import logging
+import sys
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    stream=sys.stdout,  # Log to stdout for Cloud Run
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('secure-app')
+
+app = Flask(__name__)
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Get token from header
+        token = request.headers.get('Authorization')
+        if not token:
+            logger.warning("No Authorization header present")
+            return jsonify({'error': 'Missing token'}), 401
+            
+        try:
+            # Verify token format
+            if not token.startswith('Bearer '):
+                logger.warning("Token doesn't start with Bearer")
+                raise jwt.InvalidTokenError
+                
+            token = token.split(' ')[1]
+            
+            # Get JWT secret
+            jwt_secret = os.environ.get('JWT_SECRET')
+            if not jwt_secret:
+                logger.error("JWT_SECRET not set in environment")
+                return jsonify({'error': 'Configuration error'}), 500
+                
+            # Decode and verify token
+            payload = jwt.decode(
+                token, 
+                jwt_secret,
+                algorithms=['HS256']
+            )
+            logger.info(f"Token decoded successfully for client: {payload.get('client_id')}")
+            
+            # Verify client ID
+            expected_client_id = os.environ.get('CLIENT_ID')
+            if not expected_client_id:
+                logger.error("CLIENT_ID not set in environment")
+                return jsonify({'error': 'Configuration error'}), 500
+                
+            if payload['client_id'] != expected_client_id:
+                logger.warning(f"Client ID mismatch: expected {expected_client_id}, got {payload['client_id']}")
+                raise jwt.InvalidTokenError
+                
+        except jwt.ExpiredSignatureError:
+            logger.error("Token expired")
+            return jsonify({'error': 'Token expired'}), 401
+        except jwt.InvalidTokenError as e:
+            logger.error(f"Invalid token: {str(e)}")
+            return jsonify({'error': 'Invalid token'}), 401
+        except Exception as e:
+            logger.error(f"Unexpected error in auth: {str(e)}")
+            return jsonify({'error': 'Authentication error'}), 401
+            
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+@app.route('/')
+@require_auth
+def hello():
+    """Main endpoint requiring authentication"""
+    client_id = os.environ.get('CLIENT_ID', 'unknown')
+    logger.info(f"Successful request for client: {client_id}")
+    return jsonify({
+        'message': 'Hello, World!',
+        'client_id': client_id,
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
