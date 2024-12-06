@@ -1,5 +1,34 @@
 # GCP Container Manager
 
+## How it works?
+
+1. **Container Creation (Local):**
+
+   - Creates app files from templates (app.py, requirements.txt, Dockerfile)
+   - Builds Docker image locally using Docker SDK
+   - Uses unique ID for image naming
+
+2. **Artifact Registry Interaction:**
+
+   - Creates/checks for repository in GCP Artifact Registry
+   - Configures Docker authentication for GCP
+   - Pushes built image to Artifact Registry
+
+3. **Cloud Run Deployment:**
+
+   - Deploys the pushed image to Cloud Run
+   - Configures service with environment variables
+   - Sets up IAM policies and access
+   - Returns deployment info (endpoints, status)
+
+4. **Database Storage:**
+
+   - Saves deployment information to database
+   - Stores service name, endpoints, access token, etc.
+
+5. **Cleanup:**
+   - Removes temporary app files after deployment
+
 ## Prerequisites
 
 ### 1. Install Python
