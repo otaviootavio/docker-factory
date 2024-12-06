@@ -90,6 +90,63 @@ gcloud auth application-default login
 python main.py
 ```
 
+## Service Deployment & Monitoring Tools
+
+### Workflow:
+
+Deploy your service:
+
+```python3
+python3 main.py
+```
+
+This will create a deployment configuration file named: deployment_config_YYYYMMDD_HHMMSS.json
+
+The generated file contains your service details and access tokens:
+
+```json
+{
+   "uri": "https://secure-app-xxxxx-xxxxx.a.run.app",
+   "access_token": "eyJhbGc...",
+   ...
+}
+```
+
+3. You can ping your service using the generated config:
+
+```bash
+   python3 ping.py --config deployment_config_YYYYMMDD_HHMMSS.json
+```
+
+4. Alternative ping methods:
+
+Direct URI and token:
+
+```bash
+   python3 ping.py --uri https://your-service-url --token your-access-token
+```
+
+Using environment variables:
+
+```bash
+ export SERVICE_URI="https://your-service-url"
+ export SERVICE_TOKEN="your-token"
+ python3 ping.py
+```
+
+Output format:
+
+```json
+{
+   "timestamp": "2024-12-05T21:45:23.456789",
+   "status_code": 200,
+   "response_time_ms": 123,
+   "data": {
+   "message": "Hello, World!",
+   "client_id": "example@domain.com"
+}
+```
+
 ## Troubleshooting
 
 ### Common gcloud Installation Issues:
