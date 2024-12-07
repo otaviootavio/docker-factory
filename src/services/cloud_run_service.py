@@ -40,10 +40,10 @@ class CloudRunService:
             service.template.containers = [container]
 
             # Set VPC configuration
-            vpc_access = run_v2.VpcAccess()
-            vpc_access.connector = f"projects/{self.gcp_client.project_id}/locations/{region}/connectors/default-connector"
-            vpc_access.egress = run_v2.VpcAccess.VpcEgress.PRIVATE_RANGES_ONLY
-            service.template.vpc_access = vpc_access
+            # vpc_access = run_v2.VpcAccess()
+            # vpc_access.connector = f"projects/{self.gcp_client.project_id}/locations/{region}/connectors/default-connector"
+            # vpc_access.egress = run_v2.VpcAccess.VpcEgress.PRIVATE_RANGES_ONLY
+            # service.template.vpc_access = vpc_access
 
             # Create the service
             request = run_v2.CreateServiceRequest(

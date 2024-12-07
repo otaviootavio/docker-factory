@@ -4,19 +4,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from datetime import datetime
 import os
-from .routes import deployment_router
+from .routes.deployments import router as deployment_router  # Updated import path
 from src import db
 import time
 import logging
 from typing import Callable
 import secrets
 
-# Load environment variables
-load_dotenv()
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -47,7 +47,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Security middleware
+def check_rate_limit(client_ip: str) -> bool:
+    current_time = time.time()
+    
+    # Clean up old entries
+    request_history[client_ip] = [
+        timestamp for timestamp in request_history.get(client_ip, [])
+        if current_time - timestamp < RATE_LIMIT_SECONDS
+    ]
+    
+    # Check rate limit
+    if len(request_history.get(client_ip, [])) >= MAX_REQUESTS:
+        return False
+    
+    # Add new request timestamp
+    request_history.setdefault(client_ip, []).append(current_time)
+    return True
+
+async def verify_api_key(api_key: str = Depends(api_key_header)):
+    if api_key != API_KEY:
+        logger.warning(f"Invalid API key attempt")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key"
+        )
+    return api_key
+
 @app.middleware("http")
 async def security_middleware(request: Request, call_next: Callable):
     start_time = time.time()
@@ -79,32 +104,6 @@ async def security_middleware(request: Request, call_next: Callable):
     except Exception as e:
         logger.error(f"Error processing request from {client_ip}: {str(e)}")
         raise
-
-def check_rate_limit(client_ip: str) -> bool:
-    current_time = time.time()
-    
-    # Clean up old entries
-    request_history[client_ip] = [
-        timestamp for timestamp in request_history.get(client_ip, [])
-        if current_time - timestamp < RATE_LIMIT_SECONDS
-    ]
-    
-    # Check rate limit
-    if len(request_history.get(client_ip, [])) >= MAX_REQUESTS:
-        return False
-    
-    # Add new request timestamp
-    request_history.setdefault(client_ip, []).append(current_time)
-    return True
-
-async def verify_api_key(api_key: str = Depends(api_key_header)):
-    if api_key != API_KEY:
-        logger.warning(f"Invalid API key attempt")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid API key"
-        )
-    return api_key
 
 @app.get("/health")
 async def health():
