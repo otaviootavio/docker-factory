@@ -6,6 +6,7 @@ import logging
 import sys
 from datetime import datetime
 import requests
+from flasgger import Swagger
 
 # Configure logging
 logging.basicConfig(
@@ -17,11 +18,37 @@ logger = logging.getLogger('secure-app')
 
 app = Flask(__name__)
 
-# Configure rippled node connection
-RIPPLED_URL = "http://localhost:5005"  # Ensure http:// prefix
+# Configure Swagger with JWT support
+app.config['SWAGGER'] = {
+    'title': 'Secure Rippled API',
+    'uiversion': 3
+}
+swagger = Swagger(app, template={
+    "swagger": "2.0",
+    "info": {
+        "title": "Secure Rippled API",
+        "description": "API documentation for a secure application with JWT authentication",
+        "version": "1.0.0"
+    },
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'"
+        }
+    },
+    "security": [
+        {"Bearer": []}
+    ]
+})
+
+
+# Rippled node connection URL
+RIPPLED_URL = "http://localhost:5005"
 
 def query_rippled(method, params=None):
-    """Helper function to query the rippled node"""
+    """Helper function to query the rippled node."""
     try:
         payload = {
             "method": method,
@@ -47,27 +74,25 @@ def query_rippled(method, params=None):
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Get token from header
+        """
+        Decorator to require authentication using JWT.
+        """
         token = request.headers.get('Authorization')
         if not token:
             logger.warning("No Authorization header present")
             return jsonify({'error': 'Missing token'}), 401
             
         try:
-            # Verify token format
             if not token.startswith('Bearer '):
                 logger.warning("Token doesn't start with Bearer")
                 raise jwt.InvalidTokenError
                 
             token = token.split(' ')[1]
-            
-            # Get JWT secret
             jwt_secret = os.environ.get('JWT_SECRET')
             if not jwt_secret:
                 logger.error("JWT_SECRET not set in environment")
                 return jsonify({'error': 'Configuration error'}), 500
                 
-            # Decode and verify token
             payload = jwt.decode(
                 token, 
                 jwt_secret,
@@ -75,7 +100,6 @@ def require_auth(f):
             )
             logger.info(f"Token decoded successfully for client: {payload.get('client_id')}")
             
-            # Verify client ID
             expected_client_id = os.environ.get('CLIENT_ID')
             if not expected_client_id:
                 logger.error("CLIENT_ID not set in environment")
@@ -100,12 +124,16 @@ def require_auth(f):
 
 @app.route('/health')
 def health():
-    """Health check endpoint that also checks rippled status"""
+    """
+    Health check endpoint.
+    ---
+    responses:
+      200:
+        description: Application health status
+    """
     try:
-        # Check rippled server info
         rippled_status = query_rippled("server_info")
         node_status = "healthy" if "result" in rippled_status else "rippled not responding"
-        
         return jsonify({
             'status': 'healthy',
             'rippled_status': node_status,
@@ -114,7 +142,7 @@ def health():
     except Exception as e:
         logger.error(f"Health check error: {str(e)}")
         return jsonify({
-            'status': 'healthy',  # API is still healthy even if rippled isn't
+            'status': 'healthy',
             'rippled_status': 'error',
             'timestamp': datetime.utcnow().isoformat()
         })
@@ -122,13 +150,16 @@ def health():
 @app.route('/')
 @require_auth
 def hello():
-    """Main endpoint requiring authentication"""
+    """
+    Main endpoint.
+    ---
+    responses:
+      200:
+        description: Main API endpoint with authentication
+    """
     client_id = os.environ.get('CLIENT_ID', 'unknown')
     logger.info(f"Successful request for client: {client_id}")
-    
-    # Get basic node info
     server_info = query_rippled("server_info")
-    
     return jsonify({
         'client_id': client_id,
         'timestamp': datetime.utcnow().isoformat(),
@@ -138,20 +169,38 @@ def hello():
 @app.route('/node/info')
 @require_auth
 def node_info():
-    """Get detailed node information"""
+    """
+    Get detailed node information.
+    ---
+    responses:
+      200:
+        description: Rippled server information
+    """
     return jsonify(query_rippled("server_info"))
 
 @app.route('/node/state')
 @require_auth
 def node_state():
-    """Get node state information including sync status"""
+    """
+    Get node state information.
+    ---
+    responses:
+      200:
+        description: Rippled server state
+    """
     server_state = query_rippled("server_state")
     return jsonify(server_state)
 
 @app.route('/validators')
 @require_auth
 def validators():
-    """Get information about validators"""
+    """
+    Get validators information.
+    ---
+    responses:
+      200:
+        description: Validator information
+    """
     validators_info = query_rippled("validators")
     return jsonify(validators_info)
 

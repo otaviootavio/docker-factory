@@ -16,11 +16,11 @@ class ContainerService:
         app_dir.mkdir(exist_ok=True)
 
         # Create files from templates
-        self.template_manager.write_template("app.py.template", app_dir / "app.py")
+        self.template_manager.write_template("app.py", app_dir / "app.py")
 
-        self.template_manager.write_template("requirements.template", app_dir / "requirements.txt")
+        self.template_manager.write_template("requirements.txt", app_dir / "requirements.txt")
 
-        self.template_manager.write_template("dockerfile.template", app_dir / "Dockerfile")
+        self.template_manager.write_template("dockerfile", app_dir / "Dockerfile")
         
         self.template_manager.write_template("rippled.cfg", app_dir / "rippled.cfg")
         self.template_manager.write_template("validators.txt", app_dir / "validators.txt")
