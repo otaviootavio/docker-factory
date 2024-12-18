@@ -62,6 +62,8 @@ class SecureGCPContainerManager:
         """Main deployment orchestration"""
         app_dir = None  # Track app directory for cleanup
         try:
+            self._cleanup_docker()
+            
             logger.info(
                 f"Starting secure deployment for client: {self.client_id}")
 
@@ -110,7 +112,17 @@ class SecureGCPContainerManager:
                     logger.info(f"App files cleaned up successfully: {app_dir}")
                 except Exception as cleanup_error:
                     logger.warning(
-                        f"Failed to remove app files: {cleanup_error}")
+                        f"Failed to remoe app files: {cleanup_error}")
+
+    def _cleanup_docker(self):
+        """Aggressive Docker cleanup to free space"""
+        try:
+            logger.info("Starting Docker cleanup")
+            self.docker_client.prune_builds()  # Add this method to your DockerClient class
+            logger.info("Completed Docker cleanup")
+        except Exception as e:
+            logger.warning(f"Docker cleanup failed: {e}")
+
 
     def remove_app_files(self, app_dir):
         """Remove app files after deployment"""

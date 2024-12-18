@@ -59,7 +59,7 @@ RUN mkdir -p /root/.config/gcloud /root/.docker
 EXPOSE 8000
 
 # Copy start script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
-CMD ["/start.sh"]
+CMD ["/app/start.sh"]
